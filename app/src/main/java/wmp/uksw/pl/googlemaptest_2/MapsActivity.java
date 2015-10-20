@@ -1,6 +1,10 @@
 package wmp.uksw.pl.googlemaptest_2;
 
+import android.app.LoaderManager;
 import android.content.Context;
+import android.content.CursorLoader;
+import android.content.Loader;
+import android.database.Cursor;
 import android.graphics.Camera;
 import android.location.Location;
 import android.location.LocationListener;
@@ -28,10 +32,15 @@ import org.apache.http.message.BasicNameValuePair;
 import java.util.ArrayList;
 import java.util.List;
 
+import wmp.uksw.pl.googlemaptest_2.database.Contract;
+import wmp.uksw.pl.googlemaptest_2.database.DbHelper;
 import wmp.uksw.pl.googlemaptest_2.helpers.AddMarkersTask;
 import wmp.uksw.pl.googlemaptest_2.helpers.RefreshMarkersTask;
+import wmp.uksw.pl.googlemaptest_2.models.MarkerRow;
 
-public class MapsActivity extends FragmentActivity {
+public class MapsActivity extends FragmentActivity implements LocationListener {
+
+    private static final int LOADER = 0x01;
 
     private GoogleMap mMap; // Might be null if Google Play services APK is not available.
     private LocationManager locationManager;
@@ -56,68 +65,53 @@ public class MapsActivity extends FragmentActivity {
 
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
-        final LocationListener locationListener = new LocationListener() {
-            @Override
-            public void onLocationChanged(Location location) {
-            }
-            @Override
-            public void onStatusChanged(String provider, int status, Bundle extras) {
-            }
-            @Override
-            public void onProviderEnabled(String provider) {
-            }
-            @Override
-            public void onProviderDisabled(String provider) {
-            }
-        };
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_TIME, 0, this);
 
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_TIME, 0, locationListener);
-
-        Runnable runnableMarker = new Runnable() {
-            @Override
-            public void run() {
-                while (whileLoop) {
-                    try {
-                        Thread.sleep(1000); //1000 ms = 1s
-                        final Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                        if (location != null) {
-                            longitude.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    longitude.setText(Double.toString(location.getLongitude()));
-                                }
-                            });
-
-                            latitude.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    latitude.setText(Double.toString(location.getLatitude()));
-                                }
-                            });
-
-                            Handler handler = new Handler(Looper.getMainLooper());
-                            handler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    if (marker != null)
-                                        marker.remove();
-
-                                    MarkerOptions options = new MarkerOptions();
-                                    options.position(new LatLng(location.getLatitude(), location.getLongitude()));
-                                    options.title("IM HERE!!!");
-
-                                    marker = mMap.addMarker(options);
-                                }
-                            });
-                        }
-
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-
-                }
-            }
-        };
+//        Runnable runnableMarker = new Runnable() {
+//            @Override
+//            public void run() {
+//                while (whileLoop) {
+//                    try {
+//                        Thread.sleep(1000); //1000 ms = 1s
+//                        final Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+//                        if (location != null) {
+//                            longitude.post(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    longitude.setText(Double.toString(location.getLongitude()));
+//                                }
+//                            });
+//
+//                            latitude.post(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    latitude.setText(Double.toString(location.getLatitude()));
+//                                }
+//                            });
+//
+//                            Handler handler = new Handler(Looper.getMainLooper());
+//                            handler.post(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    if (marker != null)
+//                                        marker.remove();
+//
+//                                    MarkerOptions options = new MarkerOptions();
+//                                    options.position(new LatLng(location.getLatitude(), location.getLongitude()));
+//                                    options.title("IM HERE!!!");
+//
+//                                    marker = mMap.addMarker(options);
+//                                }
+//                            });
+//                        }
+//
+//                    } catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
+//
+//                }
+//            }
+//        };
 
         mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             @Override
@@ -129,10 +123,42 @@ public class MapsActivity extends FragmentActivity {
 
                 mMap.animateCamera(center);
 
-
                 return true;
             }
         });
+
+        Runnable runnableAddMarkersToMap = new Runnable() {
+            @Override
+            public void run() {
+                while (whileLoop) {
+                    try {
+                        Thread.sleep(1000 * 60 * 2); //1000ms - 1 s
+                        DbHelper dbHelper = new DbHelper(getApplicationContext());
+
+                        List<MarkerRow> markerRows = new ArrayList<>();
+                        markerRows = dbHelper.getAllMarkers();
+
+                        Handler handler = new Handler(Looper.getMainLooper());
+                        handler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                mMap.clear();
+                            }
+                        });
+
+                        for(int i = 0; i < markerRows.size(); i++) {
+                            MarkerOptions options = new MarkerOptions();
+                            options.position(new LatLng(markerRows.get(i).getLatitude(), markerRows.get(i).getLongitude()));
+                            options.title(markerRows.get(i).getTitle());
+
+                            Marker marker = mMap.addMarker(options);
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
 
         Runnable runnableRefreshMarkers = new Runnable() {
             @Override
@@ -145,7 +171,7 @@ public class MapsActivity extends FragmentActivity {
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-               // }
+                //}
             }
         };
 
@@ -179,10 +205,12 @@ public class MapsActivity extends FragmentActivity {
             }
         });
 
-        Thread threadMarker = new Thread(runnableMarker);
+        Thread threadAddMarkersToMap = new Thread(runnableAddMarkersToMap);
+        //Thread threadMarker = new Thread(runnableMarker);
         Thread threadRefresh = new Thread(runnableRefreshMarkers);
-        threadMarker.start();
+        //threadMarker.start();
         threadRefresh.start();
+        threadAddMarkersToMap.start();
     }
 
     @Override
@@ -227,5 +255,25 @@ public class MapsActivity extends FragmentActivity {
      */
     private void setUpMap() {
         //mMap.addMarker(new MarkerOptions().position(new LatLng(0, 0)).title("Marker"));
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+
+    }
+
+    @Override
+    public void onProviderDisabled(String provider) {
+
     }
 }

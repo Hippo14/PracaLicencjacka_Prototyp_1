@@ -20,10 +20,12 @@ public class RefreshMarkersTask extends AsyncTask<Void, Void, Boolean> {
     private Context context;
     private JSONObject json;
     private JSONParser jsonParser;
+    private List<JSONObject> markersList;
 
     public RefreshMarkersTask(Context context) {
         this.context = context;
         this.list = new ArrayList<>();
+        this.markersList = new ArrayList<>();
         this.jsonParser = new JSONParser();
     }
 
@@ -38,17 +40,10 @@ public class RefreshMarkersTask extends AsyncTask<Void, Void, Boolean> {
 
         if (isConnected.check()) {
             json = jsonParser.getJSONFromUrl(AppConfig.URL_API_REFRESH_MARKER, list);
-            try {
-                JSONArray test = json.getJSONArray("2");
-                String hey = test.toString();
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
         }
         else {
             jsonParser.setError("No internet connection!");
         }
-
 
         return null;
     }
@@ -56,6 +51,17 @@ public class RefreshMarkersTask extends AsyncTask<Void, Void, Boolean> {
     @Override
     protected void onPostExecute(Boolean result) {
         super.onPostExecute(result);
+
+        try {
+            for (int i = 0; i < json.length() - 2; i++) {
+                markersList.add(json.getJSONObject(Integer.toString(i)));
+            }
+            //test = json.getJSONObject("2");
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }
