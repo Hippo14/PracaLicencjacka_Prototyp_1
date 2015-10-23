@@ -2,6 +2,9 @@ package wmp.uksw.pl.googlemaptest_2.helpers;
 
 import android.content.Context;
 import android.os.AsyncTask;
+import android.util.Log;
+
+import com.google.android.gms.maps.model.Marker;
 
 import org.apache.http.NameValuePair;
 import org.json.JSONArray;
@@ -10,6 +13,9 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import wmp.uksw.pl.googlemaptest_2.database.DbHelper;
+import wmp.uksw.pl.googlemaptest_2.models.MarkerRow;
 
 /**
  * Created by MSI on 2015-10-20.
@@ -20,13 +26,15 @@ public class RefreshMarkersTask extends AsyncTask<Void, Void, Boolean> {
     private Context context;
     private JSONObject json;
     private JSONParser jsonParser;
-    private List<JSONObject> markersList;
+    private List<MarkerRow> markersList;
+    private DbHelper dbHelper;
 
     public RefreshMarkersTask(Context context) {
         this.context = context;
         this.list = new ArrayList<>();
         this.markersList = new ArrayList<>();
         this.jsonParser = new JSONParser();
+        this.dbHelper = new DbHelper(context);
     }
 
     @Override
@@ -53,15 +61,20 @@ public class RefreshMarkersTask extends AsyncTask<Void, Void, Boolean> {
         super.onPostExecute(result);
 
         try {
+            // Delete markers from database
+            this.dbHelper.clearMarkers();
+            // Add markers to SQLite database
             for (int i = 0; i < json.length() - 2; i++) {
-                markersList.add(json.getJSONObject(Integer.toString(i)));
+                this.dbHelper.insertMarker(Double.parseDouble(json.getJSONObject(Integer.toString(i)).getString("latitude")), Double.parseDouble(json.getJSONObject(Integer.toString(i)).getString("longitude")), json.getJSONObject(Integer.toString(i)).getString("title"));
             }
-            //test = json.getJSONObject("2");
         } catch (JSONException e) {
             e.printStackTrace();
         } catch (Exception e) {
             e.printStackTrace();
         }
+        Log.d("TEST", "Pobrano markery");
     }
+
+
 
 }

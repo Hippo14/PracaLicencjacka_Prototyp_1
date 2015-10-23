@@ -1,5 +1,10 @@
 package wmp.uksw.pl.googlemaptest_2.models;
 
+import com.google.android.gms.maps.model.Marker;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
 /**
  * Created by MSI on 2015-10-20.
  */
@@ -19,6 +24,13 @@ public class MarkerRow {
         this.latitude = latitude;
         this.longitude = longitude;
         this.title = title;
+    }
+
+    public MarkerRow(JSONObject jsonObject) throws JSONException {
+        this.id = jsonObject.getInt("1");
+        this.latitude = jsonObject.getDouble("2");
+        this.longitude = jsonObject.getDouble("3");
+        this.title = jsonObject.getString("4");
     }
 
     public int getId() {

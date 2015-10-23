@@ -1,11 +1,6 @@
 package wmp.uksw.pl.googlemaptest_2;
 
-import android.app.LoaderManager;
 import android.content.Context;
-import android.content.CursorLoader;
-import android.content.Loader;
-import android.database.Cursor;
-import android.graphics.Camera;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -13,6 +8,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -20,7 +16,6 @@ import android.widget.TextView;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.Projection;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
@@ -32,7 +27,6 @@ import org.apache.http.message.BasicNameValuePair;
 import java.util.ArrayList;
 import java.util.List;
 
-import wmp.uksw.pl.googlemaptest_2.database.Contract;
 import wmp.uksw.pl.googlemaptest_2.database.DbHelper;
 import wmp.uksw.pl.googlemaptest_2.helpers.AddMarkersTask;
 import wmp.uksw.pl.googlemaptest_2.helpers.RefreshMarkersTask;
@@ -46,8 +40,9 @@ public class MapsActivity extends FragmentActivity implements LocationListener {
     private LocationManager locationManager;
     private static final long MIN_TIME = 1 * 60 /* 1000 */; // 1 minute
     private boolean whileLoop = true;
-    private Marker marker;
+    private Marker marker, auxMarker;
     private Button addMarker;
+    private DbHelper dbHelper;
 
     private LatLng myLocation;
 
@@ -57,69 +52,27 @@ public class MapsActivity extends FragmentActivity implements LocationListener {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        dbHelper = new DbHelper(getApplicationContext());
         setContentView(R.layout.activity_maps);
         setUpMapIfNeeded();
 
+        // Set textView
         longitude = (TextView) findViewById(R.id.textView);
         latitude = (TextView) findViewById(R.id.textView2);
 
+        // Find my location from GPS
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_TIME, 0, this);
 
-//        Runnable runnableMarker = new Runnable() {
-//            @Override
-//            public void run() {
-//                while (whileLoop) {
-//                    try {
-//                        Thread.sleep(1000); //1000 ms = 1s
-//                        final Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-//                        if (location != null) {
-//                            longitude.post(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    longitude.setText(Double.toString(location.getLongitude()));
-//                                }
-//                            });
-//
-//                            latitude.post(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    latitude.setText(Double.toString(location.getLatitude()));
-//                                }
-//                            });
-//
-//                            Handler handler = new Handler(Looper.getMainLooper());
-//                            handler.post(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    if (marker != null)
-//                                        marker.remove();
-//
-//                                    MarkerOptions options = new MarkerOptions();
-//                                    options.position(new LatLng(location.getLatitude(), location.getLongitude()));
-//                                    options.title("IM HERE!!!");
-//
-//                                    marker = mMap.addMarker(options);
-//                                }
-//                            });
-//                        }
-//
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-//
-//                }
-//            }
-//        };
-
+        // Set marker listener onClick
         mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             @Override
             public boolean onMarkerClick(Marker marker) {
+                if (auxMarker != null) auxMarker.remove();
                 marker.showInfoWindow();
 
                 LatLng coordinate = new LatLng(marker.getPosition().latitude, marker.getPosition().longitude);
-                CameraUpdate center = CameraUpdateFactory.newLatLngZoom(coordinate, 15);
+                CameraUpdate center = CameraUpdateFactory.newLatLngZoom(coordinate, mMap.getCameraPosition().zoom);
 
                 mMap.animateCamera(center);
 
@@ -127,69 +80,32 @@ public class MapsActivity extends FragmentActivity implements LocationListener {
             }
         });
 
-        Runnable runnableAddMarkersToMap = new Runnable() {
-            @Override
-            public void run() {
-                while (whileLoop) {
-                    try {
-                        Thread.sleep(1000 * 60 * 2); //1000ms - 1 s
-                        DbHelper dbHelper = new DbHelper(getApplicationContext());
-
-                        List<MarkerRow> markerRows = new ArrayList<>();
-                        markerRows = dbHelper.getAllMarkers();
-
-                        Handler handler = new Handler(Looper.getMainLooper());
-                        handler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                mMap.clear();
-                            }
-                        });
-
-                        for(int i = 0; i < markerRows.size(); i++) {
-                            MarkerOptions options = new MarkerOptions();
-                            options.position(new LatLng(markerRows.get(i).getLatitude(), markerRows.get(i).getLongitude()));
-                            options.title(markerRows.get(i).getTitle());
-
-                            Marker marker = mMap.addMarker(options);
-                        }
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        };
-
-        Runnable runnableRefreshMarkers = new Runnable() {
-            @Override
-            public void run() {
-                //while (whileLoop) {
-                    try {
-                        Thread.sleep(1000);
-                        RefreshMarkersTask refreshMarkersTask = new RefreshMarkersTask(getApplicationContext());
-                        refreshMarkersTask.execute();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                //}
-            }
-        };
-
+        // Set map listener onClick
         mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
+                if (auxMarker != null) auxMarker.remove();
+
                 myLocation = latLng;
 
-                CameraUpdate center = CameraUpdateFactory.newLatLngZoom(latLng, 15);
+                final MarkerOptions options = new MarkerOptions();
+                options.position(new LatLng(latLng.latitude, latLng.longitude));
+                options.title("ARE YOU SURE?!");
+
+                auxMarker = mMap.addMarker(options);
+                auxMarker.showInfoWindow();
+
+                CameraUpdate center = CameraUpdateFactory.newLatLngZoom(latLng,  mMap.getCameraPosition().zoom);
                 mMap.animateCamera(center);
             }
         });
 
+        // Button addMarker to database
         addMarker = (Button) findViewById(R.id.btnAddMarker);
         addMarker.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (latitude != null && longitude != null) {
+                if (myLocation.latitude != 0 && myLocation.longitude != 0) {
                     double latitude = myLocation.latitude;
                     double longitude = myLocation.longitude;
                     String title = "IM HERE!!";
@@ -205,11 +121,122 @@ public class MapsActivity extends FragmentActivity implements LocationListener {
             }
         });
 
-        Thread threadAddMarkersToMap = new Thread(runnableAddMarkersToMap);
-        //Thread threadMarker = new Thread(runnableMarker);
+        // Threads
+        threadRefresh();
+        threadAddMarkersToMap();
+    }
+
+    public void threadMarker() {
+        Runnable runnableMarker = new Runnable() {
+            @Override
+            public void run() {
+                while (whileLoop) {
+                    try {
+                        Thread.sleep(1000 * 5); //1000 ms = 1s
+                        final Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                        if (location != null) {
+                            longitude.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    longitude.setText(Double.toString(location.getLongitude()));
+                                }
+                            });
+
+                            latitude.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    latitude.setText(Double.toString(location.getLatitude()));
+                                }
+                            });
+
+                            Handler handler = new Handler(Looper.getMainLooper());
+                            handler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if (marker != null)
+                                        marker.remove();
+
+                                    MarkerOptions options = new MarkerOptions();
+                                    options.position(new LatLng(location.getLatitude(), location.getLongitude()));
+                                    options.title("IM HERE!!!");
+
+                                    marker = mMap.addMarker(options);
+                                }
+                            });
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
+
+        Thread threadMarker = new Thread(runnableMarker);
+        threadMarker.start();
+    }
+
+    public void threadRefresh() {
+        Runnable runnableRefreshMarkers = new Runnable() {
+            @Override
+            public void run() {
+                while (whileLoop) {
+                try {
+                    Thread.sleep(1000 * 5);
+                    RefreshMarkersTask refreshMarkersTask = new RefreshMarkersTask(getApplicationContext());
+                    refreshMarkersTask.execute();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                }
+            }
+        };
+
         Thread threadRefresh = new Thread(runnableRefreshMarkers);
-        //threadMarker.start();
         threadRefresh.start();
+    }
+
+    public void threadAddMarkersToMap() {
+        Runnable runnableAddMarkersToMap = new Runnable() {
+            @Override
+            public void run() {
+                while (whileLoop) {
+                    try {
+                        Thread.sleep(1000 * 5); //1000ms - 1 s
+
+                        List<MarkerRow> markerRows = new ArrayList<>();
+                        markerRows = dbHelper.getAllMarkers();
+
+                        Handler handler = new Handler(Looper.getMainLooper());
+                        handler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                mMap.clear();
+                            }
+                        });
+
+                        for(int i = 0; i < markerRows.size(); i++) {
+                            final MarkerOptions options = new MarkerOptions();
+                            options.position(new LatLng(markerRows.get(i).getLatitude(), markerRows.get(i).getLongitude()));
+                            options.title(markerRows.get(i).getTitle());
+
+                            Handler handler1 = new Handler(Looper.getMainLooper());
+                            handler1.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Marker marker = mMap.addMarker(options);
+                                }
+                            });
+                        }
+
+                        Log.d("TEST", "Dodano markery na mape z bazy");
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
+
+        Thread threadAddMarkersToMap = new Thread(runnableAddMarkersToMap);
         threadAddMarkersToMap.start();
     }
 

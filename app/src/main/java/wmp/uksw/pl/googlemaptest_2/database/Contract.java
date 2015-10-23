@@ -22,6 +22,8 @@ public class Contract {
     static final String INTEGER_TYPE = " INTEGER";
     static final String REAL_TYPE = " REAL";
 
+    private static final String AUTO_INCREMENT = " AUTOINCREMENT";
+    private static final String NOT_NULL = " NOT NULL";
     private static final String PRIMARY_KEY = " PRIMARY KEY";
     private static final String FOREIGN_KEY = " FOREIGN KEY";
     private static final String REFERENCES = " REFERENCES";
@@ -29,10 +31,10 @@ public class Contract {
     static final String SQL_CREATE_MARKERS =
             "CREATE TABLE IF NOT EXISTS " + Markers.TABLE_NAME +
                     " (" +
-                    Markers.COLUMN_ID        + INTEGER_TYPE + PRIMARY_KEY + COMMA_SEP +
-                    Markers.COLUMN_LATITUDE  + REAL_TYPE                  + COMMA_SEP +
-                    Markers.COLUMN_LONGITUDE + REAL_TYPE                  + COMMA_SEP +
-                    Markers.COLUMN_TITLE     + INTEGER_TYPE               +
+                    Markers.COLUMN_ID        + INTEGER_TYPE + PRIMARY_KEY + AUTO_INCREMENT + NOT_NULL + COMMA_SEP +
+                    Markers.COLUMN_LATITUDE  + REAL_TYPE                                              + COMMA_SEP +
+                    Markers.COLUMN_LONGITUDE + REAL_TYPE                                              + COMMA_SEP +
+                    Markers.COLUMN_TITLE     + INTEGER_TYPE                                           +
                     " )";
     static final String SQL_DELETE_MARKERS =
             "DROP TABLE IF EXISTS " + Markers.TABLE_NAME;
