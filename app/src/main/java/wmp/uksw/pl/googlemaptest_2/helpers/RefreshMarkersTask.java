@@ -2,7 +2,6 @@ package wmp.uksw.pl.googlemaptest_2.helpers;
 
 import android.content.Context;
 import android.os.AsyncTask;
-import android.util.Log;
 
 import com.google.android.gms.maps.model.Marker;
 
@@ -72,7 +71,6 @@ public class RefreshMarkersTask extends AsyncTask<Void, Void, Boolean> {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        Log.d("TEST", "Pobrano markery");
     }
 
 

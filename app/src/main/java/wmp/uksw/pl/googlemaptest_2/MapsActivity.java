@@ -1,16 +1,17 @@
 package wmp.uksw.pl.googlemaptest_2;
 
-import android.content.Context;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.v4.app.FragmentActivity;
+import android.support.design.widget.CoordinatorLayout;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.os.Bundle;
-import android.util.Log;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 
 import com.google.android.gms.maps.CameraUpdate;
@@ -26,14 +27,15 @@ import org.apache.http.message.BasicNameValuePair;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import wmp.uksw.pl.googlemaptest_2.database.DbHelper;
 import wmp.uksw.pl.googlemaptest_2.helpers.AddMarkersTask;
+import wmp.uksw.pl.googlemaptest_2.helpers.DeleteAllMarkersTask;
 import wmp.uksw.pl.googlemaptest_2.helpers.RefreshMarkersTask;
 import wmp.uksw.pl.googlemaptest_2.models.MarkerRow;
 
-public class MapsActivity extends FragmentActivity implements LocationListener {
-
+public class MapsActivity extends AppCompatActivity implements LocationListener {
     private static final int LOADER = 0x01;
 
     private GoogleMap mMap; // Might be null if Google Play services APK is not available.
@@ -41,39 +43,41 @@ public class MapsActivity extends FragmentActivity implements LocationListener {
     private static final long MIN_TIME = 1 * 60 /* 1000 */; // 1 minute
     private boolean whileLoop = true;
     private Marker marker, auxMarker;
-    private Button addMarker;
+    private List<Marker> markerList;
+    private FloatingActionButton addMarker, delMarkers;
     private DbHelper dbHelper;
-
-    private LatLng myLocation;
 
 
     private TextView longitude, latitude;
+    private View.OnClickListener mOnClickListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        dbHelper = new DbHelper(getApplicationContext());
+        this.dbHelper = new DbHelper(getApplicationContext());
+        this.markerList = new ArrayList<>();
         setContentView(R.layout.activity_maps);
         setUpMapIfNeeded();
 
         // Set textView
-        longitude = (TextView) findViewById(R.id.textView);
-        latitude = (TextView) findViewById(R.id.textView2);
+        //longitude = (TextView) findViewById(R.id.textView);
+        //latitude = (TextView) findViewById(R.id.textView2);
 
         // Find my location from GPS
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_TIME, 0, this);
+        //locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        //locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_TIME, 0, this);
 
         // Set marker listener onClick
         mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             @Override
             public boolean onMarkerClick(Marker marker) {
+                // If temporary marker for adding was here...
                 if (auxMarker != null) auxMarker.remove();
+                // Show marker info
                 marker.showInfoWindow();
-
+                // Set camera to clicked marker
                 LatLng coordinate = new LatLng(marker.getPosition().latitude, marker.getPosition().longitude);
                 CameraUpdate center = CameraUpdateFactory.newLatLngZoom(coordinate, mMap.getCameraPosition().zoom);
-
                 mMap.animateCamera(center);
 
                 return true;
@@ -84,31 +88,56 @@ public class MapsActivity extends FragmentActivity implements LocationListener {
         mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
+                // If temporary marker for adding was here...
                 if (auxMarker != null) auxMarker.remove();
 
-                myLocation = latLng;
-
+                // Set up temporary marker for user
                 final MarkerOptions options = new MarkerOptions();
                 options.position(new LatLng(latLng.latitude, latLng.longitude));
-                options.title("ARE YOU SURE?!");
-
+                options.title("Pls.. add me...");
                 auxMarker = mMap.addMarker(options);
                 auxMarker.showInfoWindow();
-
-                CameraUpdate center = CameraUpdateFactory.newLatLngZoom(latLng,  mMap.getCameraPosition().zoom);
+                // Set camera to temporary marker
+                CameraUpdate center = CameraUpdateFactory.newLatLngZoom(latLng, mMap.getCameraPosition().zoom);
                 mMap.animateCamera(center);
             }
         });
 
+        // Reset all markers
+        delMarkers = (FloatingActionButton) findViewById(R.id.fabBtnDel);
+        delMarkers.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                DeleteAllMarkersTask deleteAllMarkersTask = new DeleteAllMarkersTask(getApplicationContext());
+                deleteAllMarkersTask.execute();
+
+                final CoordinatorLayout coordinatorLayout = (CoordinatorLayout) findViewById(R.id.root);
+
+                Snackbar snackbar = Snackbar
+                        .make(coordinatorLayout, "All markers exterminated.", Snackbar.LENGTH_LONG);
+                snackbar.setAction("Undo", mOnClickListener)
+                        .setActionTextColor(Color.YELLOW);
+                View snackbarView = snackbar.getView();
+                snackbarView.setBackgroundColor(Color.DKGRAY);
+                TextView textView = (TextView) snackbarView.findViewById(android.support.design.R.id.snackbar_text);
+                textView.setTextColor(Color.WHITE);
+                snackbar.show();
+            }
+        });
+
         // Button addMarker to database
-        addMarker = (Button) findViewById(R.id.btnAddMarker);
+        addMarker = (FloatingActionButton) findViewById(R.id.fabBtnAdd);
+        addMarker.setFocusable(false);
+        addMarker.setFocusableInTouchMode(false);
         addMarker.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (myLocation.latitude != 0 && myLocation.longitude != 0) {
-                    double latitude = myLocation.latitude;
-                    double longitude = myLocation.longitude;
-                    String title = "IM HERE!!";
+                if (auxMarker != null) {
+                    // Setting up data for send to database
+                    double latitude = auxMarker.getPosition().latitude;
+                    double longitude = auxMarker.getPosition().longitude;
+                    Random random = new Random();
+                    String title = Double.toString(random.nextGaussian());
 
                     List<NameValuePair> list = new ArrayList<>();
                     list.add(new BasicNameValuePair("latitude", Double.toString(latitude)));
@@ -117,6 +146,31 @@ public class MapsActivity extends FragmentActivity implements LocationListener {
 
                     AddMarkersTask addMarkersTask = new AddMarkersTask(getApplicationContext(), list);
                     addMarkersTask.execute();
+
+                    final CoordinatorLayout coordinatorLayout = (CoordinatorLayout) findViewById(R.id.root);
+
+                    Snackbar snackbar = Snackbar
+                            .make(coordinatorLayout, "Mark added.", Snackbar.LENGTH_LONG);
+                    snackbar.setAction("Undo", mOnClickListener)
+                            .setActionTextColor(Color.YELLOW);
+                    View snackbarView = snackbar.getView();
+                    snackbarView.setBackgroundColor(Color.DKGRAY);
+                    TextView textView = (TextView) snackbarView.findViewById(android.support.design.R.id.snackbar_text);
+                    textView.setTextColor(Color.WHITE);
+                    snackbar.show();
+                }
+                else {
+                    final CoordinatorLayout coordinatorLayout = (CoordinatorLayout) findViewById(R.id.root);
+
+                    Snackbar snackbar = Snackbar
+                            .make(coordinatorLayout, "But first, let me take a selfie.", Snackbar.LENGTH_LONG);
+                    snackbar.setAction("Undo", mOnClickListener)
+                            .setActionTextColor(Color.YELLOW);
+                    View snackbarView = snackbar.getView();
+                    snackbarView.setBackgroundColor(Color.DKGRAY);
+                    TextView textView = (TextView) snackbarView.findViewById(android.support.design.R.id.snackbar_text);
+                    textView.setTextColor(Color.WHITE);
+                    snackbar.show();
                 }
             }
         });
@@ -210,7 +264,10 @@ public class MapsActivity extends FragmentActivity implements LocationListener {
                         handler.post(new Runnable() {
                             @Override
                             public void run() {
-                                mMap.clear();
+                                //mMap.clear();
+                                for (int i = 0; i < markerList.size(); i++) {
+                                    markerList.get(i).remove();
+                                }
                             }
                         });
 
@@ -224,11 +281,10 @@ public class MapsActivity extends FragmentActivity implements LocationListener {
                                 @Override
                                 public void run() {
                                     Marker marker = mMap.addMarker(options);
+                                    markerList.add(marker);
                                 }
                             });
                         }
-
-                        Log.d("TEST", "Dodano markery na mape z bazy");
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
