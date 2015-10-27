@@ -33,6 +33,23 @@ public class MarkerRow {
         this.title = jsonObject.getString("4");
     }
 
+    public int hashCode() {
+        int hashCode = 0;
+        hashCode = id;
+
+        return hashCode;
+    }
+
+    public boolean equals(Object object) {
+        if (object instanceof MarkerRow) {
+            MarkerRow markerRow = (MarkerRow) object;
+            return (markerRow.getId() == this.getId());
+        }
+        else {
+            return false;
+        }
+    }
+
     public int getId() {
         return id;
     }

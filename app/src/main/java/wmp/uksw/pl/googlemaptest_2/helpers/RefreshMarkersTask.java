@@ -11,6 +11,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 import wmp.uksw.pl.googlemaptest_2.database.DbHelper;
@@ -27,6 +28,8 @@ public class RefreshMarkersTask extends AsyncTask<Void, Void, Boolean> {
     private JSONParser jsonParser;
     private List<MarkerRow> markersList;
     private DbHelper dbHelper;
+
+    private HashSet<MarkerRow> hashSet = new HashSet<>();
 
     public RefreshMarkersTask(Context context) {
         this.context = context;
@@ -59,32 +62,47 @@ public class RefreshMarkersTask extends AsyncTask<Void, Void, Boolean> {
     protected void onPostExecute(Boolean result) {
         super.onPostExecute(result);
 
-        try {
-            // Delete markers from database
-            this.dbHelper.clearMarkers();
-
-            // Get markers list
-            //List<MarkerRow> markerRows = this.dbHelper.getAllMarkers();
-
-            // Add markers to SQLite database
-            for (int i = 0; i < json.length() - 2; i++) {
-
-
-
-                this.dbHelper.insertMarker(
-                        Integer.parseInt(json.getJSONObject(Integer.toString(i)).getString("id")),
-                        Double.parseDouble(json.getJSONObject(Integer.toString(i)).getString("latitude")),
-                        Double.parseDouble(json.getJSONObject(Integer.toString(i)).getString("longitude")),
-                        json.getJSONObject(Integer.toString(i)).getString("title")
+        for (int i = 0; i < json.length() - 2; i++) {
+            try {
+                JSONObject jsonObject = json.getJSONObject(Integer.toString(i));
+                hashSet.add(new MarkerRow(
+                                Integer.parseInt(jsonObject.getString("id")),
+                                Double.parseDouble(jsonObject.getString("latitude")),
+                                Double.parseDouble(jsonObject.getString("longitude")),
+                                jsonObject.getString("title")
+                        )
                 );
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
-        } catch (JSONException e) {
-            e.printStackTrace();
-        } catch (Exception e) {
-            e.printStackTrace();
         }
+
+
+//        try {
+//            // Delete markers from database
+//            this.dbHelper.clearMarkers();
+//
+//            // Get markers list
+//            //List<MarkerRow> markerRows = this.dbHelper.getAllMarkers();
+//
+//            // Add markers to SQLite database
+//            for (int i = 0; i < json.length() - 2; i++) {
+//                this.dbHelper.insertMarker(
+//                        Integer.parseInt(json.getJSONObject(Integer.toString(i)).getString("id")),
+//                        Double.parseDouble(json.getJSONObject(Integer.toString(i)).getString("latitude")),
+//                        Double.parseDouble(json.getJSONObject(Integer.toString(i)).getString("longitude")),
+//                        json.getJSONObject(Integer.toString(i)).getString("title")
+//                );
+//            }
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
     }
 
 
-
+    public HashSet<MarkerRow> getHashSet() {
+        return hashSet;
+    }
 }
