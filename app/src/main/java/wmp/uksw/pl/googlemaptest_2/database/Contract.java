@@ -14,6 +14,7 @@ public class Contract {
         public static final String COLUMN_LATITUDE = "latitude";
         public static final String COLUMN_LONGITUDE = "longitude";
         public static final String COLUMN_TITLE = "title";
+
     }
 
     //aux constants
@@ -27,15 +28,17 @@ public class Contract {
     private static final String PRIMARY_KEY = " PRIMARY KEY";
     private static final String FOREIGN_KEY = " FOREIGN KEY";
     private static final String REFERENCES = " REFERENCES";
+    private static final String UNIQUE = " UNIQUE";
 
     static final String SQL_CREATE_MARKERS =
             "CREATE TABLE IF NOT EXISTS " + Markers.TABLE_NAME +
                     " (" +
-                    Markers.COLUMN_ID        + INTEGER_TYPE + PRIMARY_KEY + AUTO_INCREMENT + NOT_NULL + COMMA_SEP +
-                    Markers.COLUMN_LATITUDE  + REAL_TYPE                                              + COMMA_SEP +
-                    Markers.COLUMN_LONGITUDE + REAL_TYPE                                              + COMMA_SEP +
-                    Markers.COLUMN_TITLE     + INTEGER_TYPE                                           +
+                    Markers.COLUMN_ID        + INTEGER_TYPE                     + COMMA_SEP +
+                    Markers.COLUMN_LATITUDE  + REAL_TYPE       + UNIQUE         + COMMA_SEP +
+                    Markers.COLUMN_LONGITUDE + REAL_TYPE       + UNIQUE         + COMMA_SEP +
+                    Markers.COLUMN_TITLE     + INTEGER_TYPE                                 +
                     " )";
+
     static final String SQL_DELETE_MARKERS =
             "DROP TABLE IF EXISTS " + Markers.TABLE_NAME;
 }

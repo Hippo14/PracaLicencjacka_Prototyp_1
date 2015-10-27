@@ -62,9 +62,21 @@ public class RefreshMarkersTask extends AsyncTask<Void, Void, Boolean> {
         try {
             // Delete markers from database
             this.dbHelper.clearMarkers();
+
+            // Get markers list
+            //List<MarkerRow> markerRows = this.dbHelper.getAllMarkers();
+
             // Add markers to SQLite database
             for (int i = 0; i < json.length() - 2; i++) {
-                this.dbHelper.insertMarker(Double.parseDouble(json.getJSONObject(Integer.toString(i)).getString("latitude")), Double.parseDouble(json.getJSONObject(Integer.toString(i)).getString("longitude")), json.getJSONObject(Integer.toString(i)).getString("title"));
+
+
+
+                this.dbHelper.insertMarker(
+                        Integer.parseInt(json.getJSONObject(Integer.toString(i)).getString("id")),
+                        Double.parseDouble(json.getJSONObject(Integer.toString(i)).getString("latitude")),
+                        Double.parseDouble(json.getJSONObject(Integer.toString(i)).getString("longitude")),
+                        json.getJSONObject(Integer.toString(i)).getString("title")
+                );
             }
         } catch (JSONException e) {
             e.printStackTrace();

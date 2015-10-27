@@ -21,7 +21,7 @@ import wmp.uksw.pl.googlemaptest_2.models.MarkerRow;
  */
 public class DbHelper extends SQLiteOpenHelper {
 
-    public static final int DATABASE_VERSION = 3;
+    public static final int DATABASE_VERSION = 4;
     public static final String DATABASE_NAME = "map.db";
 
     public DbHelper(Context context) {super(context, DATABASE_NAME, null, DATABASE_VERSION);}
@@ -77,9 +77,13 @@ public class DbHelper extends SQLiteOpenHelper {
                 markerRows.add(markerRow);
             } while(cursor.moveToNext());
 
+            db.close();
+
             return markerRows;
         }
         else {
+            db.close();
+
             return markerRows;
         }
     }
@@ -90,6 +94,7 @@ public class DbHelper extends SQLiteOpenHelper {
 
         // Create a new map of values, where column names are the keys
         ContentValues contentValues = new ContentValues();
+        contentValues.put(Contract.Markers.COLUMN_ID, markerRow.getId());
         contentValues.put(Contract.Markers.COLUMN_LATITUDE, markerRow.getLatitude());
         contentValues.put(Contract.Markers.COLUMN_LONGITUDE, markerRow.getLongitude());
         contentValues.put(Contract.Markers.COLUMN_TITLE, markerRow.getTitle());
@@ -100,12 +105,13 @@ public class DbHelper extends SQLiteOpenHelper {
         db.insertOrThrow(Contract.Markers.TABLE_NAME, null, contentValues);
     }
 
-    public void insertMarker(double latitude, double longitude, String title) throws JSONException {
+    public void insertMarker(int id, double latitude, double longitude, String title) throws JSONException {
         // Gets the data repository in write mode
         SQLiteDatabase db = this.getWritableDatabase();
 
         // Create a new map of values, where column names are the keys
         ContentValues contentValues = new ContentValues();
+        contentValues.put(Contract.Markers.COLUMN_ID, id);
         contentValues.put(Contract.Markers.COLUMN_LATITUDE, latitude);
         contentValues.put(Contract.Markers.COLUMN_LONGITUDE, longitude);
         contentValues.put(Contract.Markers.COLUMN_TITLE, title);

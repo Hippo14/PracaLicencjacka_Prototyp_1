@@ -28,6 +28,9 @@ import org.apache.http.message.BasicNameValuePair;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import wmp.uksw.pl.googlemaptest_2.database.DbHelper;
 import wmp.uksw.pl.googlemaptest_2.helpers.AddMarkersTask;
@@ -47,9 +50,10 @@ public class MapsActivity extends AppCompatActivity implements LocationListener 
     private FloatingActionButton addMarker, delMarkers;
     private DbHelper dbHelper;
 
-
     private TextView longitude, latitude;
     private View.OnClickListener mOnClickListener;
+
+    private ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,6 +62,8 @@ public class MapsActivity extends AppCompatActivity implements LocationListener 
         this.markerList = new ArrayList<>();
         setContentView(R.layout.activity_maps);
         setUpMapIfNeeded();
+
+        scheduledThreadPoolExecutor = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(4);
 
         // Set textView
         //longitude = (TextView) findViewById(R.id.textView);
@@ -158,8 +164,7 @@ public class MapsActivity extends AppCompatActivity implements LocationListener 
                     TextView textView = (TextView) snackbarView.findViewById(android.support.design.R.id.snackbar_text);
                     textView.setTextColor(Color.WHITE);
                     snackbar.show();
-                }
-                else {
+                } else {
                     final CoordinatorLayout coordinatorLayout = (CoordinatorLayout) findViewById(R.id.root);
 
                     Snackbar snackbar = Snackbar
@@ -177,7 +182,8 @@ public class MapsActivity extends AppCompatActivity implements LocationListener 
 
         // Threads
         threadRefresh();
-        threadAddMarkersToMap();
+        //threadAddMarkersToMap();
+        testTask();
     }
 
     public void threadMarker() {
@@ -234,19 +240,59 @@ public class MapsActivity extends AppCompatActivity implements LocationListener 
             @Override
             public void run() {
                 while (whileLoop) {
-                try {
-                    Thread.sleep(1000 * 5);
-                    RefreshMarkersTask refreshMarkersTask = new RefreshMarkersTask(getApplicationContext());
-                    refreshMarkersTask.execute();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                    try {
+                        Thread.sleep(1000 * 5);
+                        RefreshMarkersTask refreshMarkersTask = new RefreshMarkersTask(getApplicationContext());
+                        refreshMarkersTask.execute();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         };
 
         Thread threadRefresh = new Thread(runnableRefreshMarkers);
         threadRefresh.start();
+    }
+
+    public void testTask() {
+        ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(4);
+
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                List<MarkerRow> markerRows = new ArrayList<>();
+                markerRows = dbHelper.getAllMarkers();
+
+                Handler handler = new Handler(Looper.getMainLooper());
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        //mMap.clear();
+                        for (int i = 0; i < markerList.size(); i++) {
+                            markerList.get(i).remove();
+                        }
+                    }
+                });
+
+                for (int i = 0; i < markerRows.size(); i++) {
+                    final MarkerOptions options = new MarkerOptions();
+                    options.position(new LatLng(markerRows.get(i).getLatitude(), markerRows.get(i).getLongitude()));
+                    options.title(markerRows.get(i).getTitle());
+
+                    Handler handler1 = new Handler(Looper.getMainLooper());
+                    handler1.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Marker marker = mMap.addMarker(options);
+                            markerList.add(marker);
+                        }
+                    });
+                }
+            }
+        };
+
+        scheduledThreadPoolExecutor.scheduleWithFixedDelay(runnable, 5, 5, TimeUnit.SECONDS);
     }
 
     public void threadAddMarkersToMap() {
@@ -300,6 +346,21 @@ public class MapsActivity extends AppCompatActivity implements LocationListener 
     protected void onResume() {
         super.onResume();
         setUpMapIfNeeded();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
     }
 
     /**
