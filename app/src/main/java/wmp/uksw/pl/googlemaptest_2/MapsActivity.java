@@ -26,8 +26,6 @@ import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
 
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.Executors;
@@ -56,7 +54,6 @@ public class MapsActivity extends AppCompatActivity implements LocationListener 
     private View.OnClickListener mOnClickListener;
 
     private ScheduledThreadPoolExecutor scheduledThreadPoolExecutor;
-    private HashSet<MarkerRow> hashMap;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -247,7 +244,6 @@ public class MapsActivity extends AppCompatActivity implements LocationListener 
                         Thread.sleep(1000 * 5);
                         RefreshMarkersTask refreshMarkersTask = new RefreshMarkersTask(getApplicationContext());
                         refreshMarkersTask.execute();
-                        hashMap = refreshMarkersTask.getHashSet();
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -260,13 +256,13 @@ public class MapsActivity extends AppCompatActivity implements LocationListener 
     }
 
     public void testTask() {
-        scheduledThreadPoolExecutor = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(4);
+        ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = (ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(4);
 
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
-                //List<MarkerRow> markerRows = new ArrayList<>();
-                //markerRows = dbHelper.getAllMarkers();
+                List<MarkerRow> markerRows = new ArrayList<>();
+                markerRows = dbHelper.getAllMarkers();
 
                 Handler handler = new Handler(Looper.getMainLooper());
                 handler.post(new Runnable() {
@@ -279,13 +275,10 @@ public class MapsActivity extends AppCompatActivity implements LocationListener 
                     }
                 });
 
-                HashSet<MarkerRow> set = new HashSet<>();
-
-                for (Iterator<MarkerRow> it = set.iterator(); it.hasNext();) {
-                    MarkerRow markerRows = it.next();
+                for (int i = 0; i < markerRows.size(); i++) {
                     final MarkerOptions options = new MarkerOptions();
-                    options.position(new LatLng(markerRows.getLatitude(), markerRows.getLongitude()));
-                    options.title(markerRows.getTitle());
+                    options.position(new LatLng(markerRows.get(i).getLatitude(), markerRows.get(i).getLongitude()));
+                    options.title(markerRows.get(i).getTitle());
 
                     Handler handler1 = new Handler(Looper.getMainLooper());
                     handler1.post(new Runnable() {
@@ -295,23 +288,7 @@ public class MapsActivity extends AppCompatActivity implements LocationListener 
                             markerList.add(marker);
                         }
                     });
-
                 }
-
-//                for (int i = 0; i < markerRows.size(); i++) {
-//                    final MarkerOptions options = new MarkerOptions();
-//                    options.position(new LatLng(markerRows.get(i).getLatitude(), markerRows.get(i).getLongitude()));
-//                    options.title(markerRows.get(i).getTitle());
-//
-//                    Handler handler1 = new Handler(Looper.getMainLooper());
-//                    handler1.post(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            Marker marker = mMap.addMarker(options);
-//                            markerList.add(marker);
-//                        }
-//                    });
-//                }
             }
         };
 
